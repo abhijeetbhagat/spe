@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 ffmpeg-next = "4.2.1"
+sdl2 = "*"

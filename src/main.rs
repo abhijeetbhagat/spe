@@ -26,15 +26,16 @@ fn main() -> Result<(), ffmpeg::Error> {
             .best(Type::Video)
             .ok_or_else(|| ffmpeg::Error::StreamNotFound)?;
 
-        let mut decoder = in_stream.codec().decoder().video()?;
+        let mut video_decoder = in_stream.codec().decoder().video()?;
+        //let mut audio_decoder = in_stream.codec().decoder().audio()?;
 
         let mut scaler = Scaler::get(
-            decoder.format(),
-            decoder.width(),
-            decoder.height(),
+            video_decoder.format(),
+            video_decoder.width(),
+            video_decoder.height(),
             Pixel::YUV420P,
-            decoder.width(),
-            decoder.height(),
+            video_decoder.width(),
+            video_decoder.height(),
             Flags::BILINEAR,
         )?;
 
@@ -43,7 +44,7 @@ fn main() -> Result<(), ffmpeg::Error> {
         video_subsystem.gl_set_swap_interval(1);
 
         let window = video_subsystem
-            .window("spe", decoder.width(), decoder.height())
+            .window("spe", video_decoder.width(), video_decoder.height())
             .position_centered()
             .build()
             .unwrap();
@@ -58,20 +59,26 @@ fn main() -> Result<(), ffmpeg::Error> {
 
         let texture_creator = canvas.texture_creator();
         let mut texture = texture_creator
-            .create_texture_streaming(PixelFormatEnum::YV12, decoder.width(), decoder.height())
+            .create_texture_streaming(
+                PixelFormatEnum::YV12,
+                video_decoder.width(),
+                video_decoder.height(),
+            )
             .unwrap();
 
         let mut event_pump = sdl_context.event_pump().unwrap();
-        let mut i = 0;
+
+        println!("fps {}", f64::from(in_stream.rate()));
+        let sleep = 1f64 / f64::from(in_stream.rate());
 
         for (i, (_, p)) in ictx.packets().enumerate() {
             let mut frame = Video::empty();
-            match decoder.decode(&p, &mut frame) {
+            match video_decoder.decode(&p, &mut frame) {
                 Ok(_) => {
                     let mut yuv_frame = Video::empty();
                     scaler.run(&frame, &mut yuv_frame)?;
 
-                    ::std::thread::sleep(Duration::from_millis(33));
+                    ::std::thread::sleep(Duration::from_secs_f64(sleep));
                     let rect = Rect::new(0, 0, yuv_frame.width(), yuv_frame.height());
                     println!("rendering frame {}", i);
                     texture.update_yuv(

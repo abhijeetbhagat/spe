@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 ffmpeg-next = "4.2.1"
 sdl2 = "*"
+num-rational = "0.3.0"
